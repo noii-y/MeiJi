@@ -1,0 +1,46 @@
+# 全部忽略，再用白名单放行需要纳入版本管理的文件
+/*
+
+# ---- 源码与工程文件 ----
+!/.gitignore
+!/README.md
+!/LICENSE
+!/requirements.txt
+!/pet.py
+!/meji.ico
+!/MejiPet.iss
+!/make_icon.py
+!/gen_iss.py
+!/regen2.py
+!/swap_assets.py
+!/fix_away.py
+
+# ---- 测试 / 验收脚本 ----
+!/test_static.py
+!/test_logic.py
+!/test_click_switch.py
+!/visual_test.py
+!/test_exe_pkg.py
+!/capture_pet.py
+!/quit_harness.py
+!/accept_click.py
+
+# ---- 表情素材（运行时必需，体积小）----
+!/assets/
+
+# 明确排除构建产物、临时素材与分析文件（即便在白名单目录下也不提交）
+build/
+dist/
+installer/
+assets_new/
+_assets_backup_v1/
+_analysis/
+_backup/
+_shots/
+vtest/
+__pycache__/
+*.pyc
+*.spec
+*.log
+*.txt
+!/requirements.txt
