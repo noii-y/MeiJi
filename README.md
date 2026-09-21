@@ -60,15 +60,20 @@
 
 ## 安装与使用
 
+> 下载地址（发布页）：**<https://github.com/noii-y/MeiJi/releases/latest>**
+>
+> - 安装包：[`MejiPet_Setup_v1.0.exe`](https://github.com/noii-y/MeiJi/releases/download/v1.0/MejiPet_Setup_v1.0.exe)（约 160 MB）
+> - 绿色单文件：[`MejiPet.exe`](https://github.com/noii-y/MeiJi/releases/download/v1.0/MejiPet.exe)（约 160 MB）
+
 ### 方式一：安装包（推荐给普通用户）
 
-1. 到 [Releases](../../releases) 下载 `MejiPet_Setup_v*.exe`。
+1. 从上方链接或 [Releases](https://github.com/noii-y/MeiJi/releases/latest) 下载 `MejiPet_Setup_v1.0.exe`。
 2. 双击安装（中文向导，**无需管理员权限**），默认创建桌面与开始菜单快捷方式。
 3. 从桌面快捷方式「仓鼠美叽」启动；卸载用开始菜单里的「卸载仓鼠美叽」或系统「设置 → 应用」。
 
 ### 方式二：绿色单文件
 
-下载 `MejiPet.exe`，双击即用，首次启动会自解压约 10 秒。删除该文件即卸载，配置文件位于 `C:\Users\<你>\.meji_pet_config.json`。
+从上方链接下载 `MejiPet.exe`，双击即用，首次启动会自解压约 10 秒。删除该文件即卸载，配置文件位于 `C:\Users\<你>\.meji_pet_config.json`。
 
 ### 方式三：从源码运行
 
