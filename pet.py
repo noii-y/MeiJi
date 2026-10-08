@@ -24,7 +24,7 @@ def save_cfg(cfg):
         pass
 
 from PySide6.QtWidgets import QApplication, QLabel, QMenu, QWidget
-from PySide6.QtCore import Qt, QTimer, QSize
+from PySide6.QtCore import Qt, QTimer, QSize, QSharedMemory
 from PySide6.QtGui import QAction, QMovie
 
 FACES = {
@@ -433,6 +433,8 @@ class Pet(QWidget):
                 QTimer.singleShot(gap, lambda t=token: self._do_single_click(t))
 
     def _do_single_click(self, token):
+        if not self._alive:
+            return
         if token != self._click_token:
             return  # 已被双击取消
         # 单击=切换常驻表情：随机挑一个与当前不同的可循环表情，一直停留到
@@ -477,7 +479,7 @@ class Pet(QWidget):
                 self.walk_target = None
                 if self._away_mode:
                     self.hide()
-                    QTimer.singleShot(4000, self.come_back)
+                    QTimer.singleShot(4000, lambda: self._alive and self.come_back())
                 else:
                     # 小范围走动结束，回到自动表情
                     self.face(self.auto_state)
@@ -527,9 +529,23 @@ class Pet(QWidget):
         self.mood = max(0, self.mood - 0.015)
 
     def close_pet(self):
-        if self.manager:
-            self.manager.remove_pet(self)
-        self.close()
+        self._alive = False
+        try:
+            self.timer.stop()
+            self.decay_timer.stop()
+            if self.current_movie:
+                self.current_movie.stop()
+            for pa in list(self.particles):
+                try:
+                    pa._timer.stop()
+                    pa.close()
+                except Exception:
+                    pass
+            self.particles.clear()
+        finally:
+            if self.manager:
+                self.manager.remove_pet(self)
+            self.close()
 
     def quit_all(self):
         if self.manager:
@@ -606,6 +622,14 @@ class PetManager:
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    # 单实例锁：已有一个美叽在运行时，第二个实例直接退出，避免重复宠物/托盘
+    singleton = QSharedMemory("MejiPet_Singleton_v1")
+    if singleton.attach():
+        singleton.detach()
+        sys.exit(0)
+    if not singleton.create(1):
+        sys.exit(0)
+    app._singleton = singleton  # 持有引用，随进程存活
     mgr = PetManager()
     Pet.manager = mgr
     mgr.spawn()
