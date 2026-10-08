@@ -61,7 +61,7 @@ FACES = {
     "idle":     "meji_idle_t.gif",
     "happy":    "meji_happy_t.gif",
     "hug":      "meji_hug_t.gif",
-    "money":    "meji_angry_t.gif",
+    "money":    "meji_money_t.gif",
     "sleep":    "meji_sleep_t.gif",
     "eat":      "meji_eat_t.gif",
     "excited":  "meji_excited_t.gif",
@@ -69,7 +69,7 @@ FACES = {
     "kiss":     "meji_kiss_t.gif",
     "laugh":    "meji_laugh_t.gif",
     "phone":    "meji_phone_t.gif",
-    "wave":     "meji_fan_t.gif",
+    "wave":     "meji_wave_t.gif",
     "hug2":     "meji_hug2_t.gif",
     "joy":      "meji_joy_t.gif",
     "drunk":    "meji_drunk_t.gif",
@@ -641,21 +641,51 @@ class PetManager:
                 return inner
             def do_quit(icon, item):
                 self.cmd_queue.put("__quit__")
+            def do_boss(icon, item):
+                self.cmd_queue.put("__boss__")
             menu = pystray.Menu(
-                pystray.MenuItem("喂瓜子", mk("feed")),
-                pystray.MenuItem("摸摸头", mk("pet")),
+                pystray.MenuItem("🌻 喂瓜子", mk("feed")),
+                pystray.MenuItem("🤍 摸摸头", mk("pet")),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("召唤一只", mk("__spawn__")),
-                pystray.MenuItem("退出", do_quit),
+                pystray.MenuItem("🐣 召唤一只", mk("__spawn__")),
+                pystray.MenuItem("🙈 隐藏/显示 (Ctrl+Alt+H)", do_boss),
+                pystray.MenuItem("🚪 退出", do_quit),
             )
             self.tray = pystray.Icon("meji", ic, "仓鼠美叽", menu)
             import threading
             threading.Thread(target=self.tray.run, daemon=True).start()
+            threading.Thread(target=self._hotkey_loop, daemon=True).start()
             self.poll_timer = QTimer()
             self.poll_timer.timeout.connect(self._poll_cmds)
             self.poll_timer.start(100)
         except Exception:
             log.exception("托盘初始化失败")
+
+    def _hotkey_loop(self):
+        """全局老板键 Ctrl+Alt+H：一键隐藏/召回。注册失败则降级，仅托盘菜单可用。"""
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+        MOD_CTRL, MOD_ALT, MOD_NOREPEAT = 0x0002, 0x0001, 0x4000
+        VK_H = 0x48
+        if not user32.RegisterHotKey(None, 1, MOD_CTRL | MOD_ALT | MOD_NOREPEAT, VK_H):
+            log.info("老板键注册失败（可能被占用），可用托盘菜单隐藏/显示")
+            return
+        msg = wintypes.MSG()
+        try:
+            while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+                if msg.message == 0x0312:  # WM_HOTKEY
+                    self.cmd_queue.put("__boss__")
+        finally:
+            user32.UnregisterHotKey(None, 1)
+
+    def boss_toggle(self):
+        self._boss_hidden = not getattr(self, "_boss_hidden", False)
+        for p in list(self.pets):
+            if self._boss_hidden:
+                p.hide()
+            else:
+                p.show()
 
     def _poll_cmds(self):
         try:
@@ -667,6 +697,8 @@ class PetManager:
                 elif cmd == "__spawn__":
                     if len(self.pets) < 5:
                         self.spawn()
+                elif cmd == "__boss__":
+                    self.boss_toggle()
                 else:
                     for p in list(self.pets):
                         try:

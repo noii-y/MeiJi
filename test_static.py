@@ -13,8 +13,8 @@ FACES_KEYS = [
     "fume","furious","lieflat","stomp","cheer","cool","surprised","sushi",
     "salad","innocent","blowkiss","glare","away"
 ]
-# money 对应 meji_angry_t.gif，wave 对应 meji_fan_t.gif
-FILE_MAP = {"money": "meji_angry_t.gif", "wave": "meji_fan_t.gif"}
+# money/wave 运行时文件已正名，直接用 meji_<键>_t.gif
+FILE_MAP = {}
 
 SIZES = ["50","60","100","150"]
 results = []

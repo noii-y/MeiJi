@@ -23,6 +23,7 @@
 !/test_config.py
 !/test_multimonitor.py
 !/test_tick.py
+!/test_boss.py
 !/visual_test.py
 !/test_exe_pkg.py
 !/capture_pet.py
