@@ -21,6 +21,7 @@
 !/test_click_switch.py
 !/test_lifecycle.py
 !/test_config.py
+!/test_multimonitor.py
 !/visual_test.py
 !/test_exe_pkg.py
 !/capture_pet.py

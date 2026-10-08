@@ -54,7 +54,7 @@ def save_cfg(cfg):
         log.exception("配置保存失败")
 
 from PySide6.QtWidgets import QApplication, QLabel, QMenu, QWidget
-from PySide6.QtCore import Qt, QTimer, QSize, QSharedMemory
+from PySide6.QtCore import Qt, QTimer, QSize, QSharedMemory, QPoint
 from PySide6.QtGui import QAction, QMovie
 
 FACES = {
@@ -196,12 +196,13 @@ class Pet(QWidget):
         self.current_face_key = None
         self._load_movies()
 
-        screen = QApplication.primaryScreen().geometry()
-        self.screen_w = screen.width()
-        self.screen_h = screen.height()
-
-        self.px = float(random.randint(100, self.screen_w - W - 100))
-        self.py = float(random.randint(200, self.screen_h - W - 100))
+        scr = QApplication.primaryScreen()
+        g = scr.availableGeometry()
+        self._screen = scr
+        self.screen_ox, self.screen_oy = g.left(), g.top()
+        self.screen_w, self.screen_h = g.width(), g.height()
+        self.px = float(random.randint(g.left() + 100, g.right() + 1 - W - 60))
+        self.py = float(random.randint(g.top() + 120, g.bottom() + 1 - W - 40))
         self.move(int(self.px), int(self.py))
 
         self.state = "idle"
@@ -255,6 +256,23 @@ class Pet(QWidget):
                 self.movie_sizes[k] = QSize(pi.width, pi.height)
                 pi.close()
                 self.movies[k] = m
+
+    def _screen_at(self, x, y):
+        if self._screen not in QApplication.screens():
+            self._screen = None  # 所在显示器已断开
+        return (QApplication.screenAt(QPoint(int(x + W / 2), int(y + W / 2)))
+                or self._screen or QApplication.primaryScreen())
+
+    def clamp_to_screen(self, x, y):
+        """把点钳制到所在显示器的可用区域（排除任务栏）；跨屏时更新所在屏幕与边界。"""
+        scr = self._screen_at(x, y)
+        g = scr.availableGeometry()
+        x = max(g.left(), min(x, g.right() + 1 - W))
+        y = max(g.top(), min(y, g.bottom() + 1 - W))
+        self._screen = scr
+        self.screen_ox, self.screen_oy = g.left(), g.top()
+        self.screen_w, self.screen_h = g.width(), g.height()
+        return x, y
 
     def build_menu(self):
         self.menu = QMenu()
@@ -391,19 +409,20 @@ class Pet(QWidget):
         self.state_end = time.time() * 1000 + 30000
         self.face("away")
         self.last_auto_time = time.time()
-        tx = float(self.screen_w + W)
-        self.walk_target = (tx, self.py)
+        g = self._screen.availableGeometry()
+        self.walk_target = (float(g.right() + 1 + W), self.py)
 
     def come_back(self):
         self._away_mode = False
         self.show()
-        self.px = float(self.screen_w + W)
-        self.py = float(random.randint(200, self.screen_h - W - 100))
+        g = self._screen.availableGeometry()
+        self.px = float(g.right() + 1)
+        self.py = float(random.randint(g.top() + 120, g.bottom() + 1 - W - 40))
         self.move(int(self.px), int(self.py))
         self.state = "walk"
         self.state_end = time.time() * 1000 + 30000
         self.face("idle")
-        tx = float(random.randint(100, self.screen_w // 2))
+        tx = float(random.randint(g.left() + 100, g.left() + g.width() // 2))
         self.walk_target = (tx, self.py)
 
     def start_walk(self, token=None):
@@ -415,10 +434,11 @@ class Pet(QWidget):
         self.state = "walk"
         self.state_end = time.time() * 1000 + 4000
         self.face("idle")
+        g = self._screen.availableGeometry()
         cx, cy = self.px, self.py
         # 小范围挪动，避免干扰工作
-        tx = max(40, min(self.screen_w - W - 40, cx + random.randint(-80, 80)))
-        ty = max(80, min(self.screen_h - W - 80, cy + random.randint(-50, 50)))
+        tx = max(g.left()+40, min(g.right()+1-W-40, cx + random.randint(-80, 80)))
+        ty = max(g.top()+80, min(g.bottom()+1-W-80, cy + random.randint(-50, 50)))
         self.walk_target = (float(tx), float(ty))
 
     def mousePressEvent(self, e):
@@ -439,12 +459,10 @@ class Pet(QWidget):
                 gp = e.globalPosition().toPoint()
                 nx = gp.x() - self._drag_pos.x()
                 ny = gp.y() - self._drag_pos.y()
-                # 钳制在屏幕内，防止拖丢
-                nx = max(0, min(self.screen_w - W, nx))
-                ny = max(0, min(self.screen_h - W, ny))
-                self.move(nx, ny)
-                self.px = float(nx)
-                self.py = float(ny)
+                # 钳制在所在显示器内，跨屏时跟随到新屏幕，防止拖丢
+                nx, ny = self.clamp_to_screen(nx, ny)
+                self.move(int(nx), int(ny))
+                self.px, self.py = float(nx), float(ny)
 
     def mouseReleaseEvent(self, e):
         if e.button() == Qt.LeftButton:
@@ -520,11 +538,11 @@ class Pet(QWidget):
                 self.py += dy/dist * step
                 self.move(int(self.px), int(self.py))
         elif not self._drag_pos:
-            # 分辨率改变后把美叽钳回屏幕内
-            if (self.px < 0 or self.px > self.screen_w - W or
-                    self.py < 0 or self.py > self.screen_h - W):
-                self.px = max(0, min(self.screen_w - W, self.px))
-                self.py = max(0, min(self.screen_h - W, self.py))
+            # 显示器变化/分辨率改变后把美叽钳回所在屏幕内
+            g = self._screen.availableGeometry() if self._screen in QApplication.screens() else None
+            if g is None or (self.px < g.left() or self.px > g.right()+1-W or
+                    self.py < g.top() or self.py > g.bottom()+1-W):
+                self.px, self.py = self.clamp_to_screen(self.px, self.py)
                 self.move(int(self.px), int(self.py))
 
     def do_auto_step(self):
