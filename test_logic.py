@@ -20,6 +20,20 @@ mgr = P.PetManager()
 P.Pet.manager = mgr
 p = mgr.spawn()
 
+# 备份真实配置，测试结束时还原（set_size/set_activity 会写配置，避免污染用户设置）
+_cfg_existed = os.path.exists(P.CFG_PATH)
+_cfg_bytes = open(P.CFG_PATH, "rb").read() if _cfg_existed else None
+def _restore_cfg():
+    for x in (P.CFG_PATH + ".tmp",):
+        if os.path.exists(x):
+            try: os.remove(x)
+            except Exception: pass
+    if _cfg_existed:
+        tmp = P.CFG_PATH + ".t"
+        open(tmp, "wb").write(_cfg_bytes); os.replace(tmp, P.CFG_PATH)
+    elif os.path.exists(P.CFG_PATH):
+        os.remove(P.CFG_PATH)
+
 # 1. 初始40个movie
 check("初始加载40个movie", len(p.movies)==40, str(len(p.movies)))
 
@@ -137,6 +151,7 @@ check("start_away: away模式+目标在屏幕外", p2._away_mode and p2.walk_tar
       f"tx={p2.walk_target[0]:.0f} screen_w={p2.screen_w}")
 check("start_away: 当前脸=away", p2.current_face_key=="away", p2.current_face_key)
 
+_restore_cfg()
 passed=sum(results); total=len(results)
 print(f"\n===== 逻辑测试：{passed}/{total} 通过 =====")
 sys.exit(0 if passed==total else 1)

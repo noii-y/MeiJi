@@ -1,10 +1,30 @@
 ﻿# -*- coding: utf-8 -*-
 """仓鼠美叽 桌宠 v10 - 预缩放 GIF，运行时直接加载对应尺寸"""
 import sys, os, random, math, time, json, queue
+import logging, logging.handlers
 
 def res(p):
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, p)
+
+def setup_logging():
+    """日志只写本地文件（普通用户无感），用于排查问题，不弹窗、不打印到界面。"""
+    lg = logging.getLogger("meji")
+    if not lg.handlers:
+        logf = os.path.join(os.path.expanduser("~"), ".meji_pet.log")
+        h = logging.handlers.RotatingFileHandler(
+            logf, maxBytes=512 * 1024, backupCount=2, encoding="utf-8")
+        h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        lg.addHandler(h)
+        lg.setLevel(logging.INFO)
+    return lg
+
+log = setup_logging()
+
+def _excepthook(etype, val, tb):
+    log.error("未捕获异常", exc_info=(etype, val, tb))
+
+sys.excepthook = _excepthook
 
 CFG_PATH = os.path.join(os.path.expanduser("~"), ".meji_pet_config.json")
 DEFAULTS = {"size": 60, "activity": 15}
@@ -13,15 +33,25 @@ def load_cfg():
     try:
         with open(CFG_PATH, "r", encoding="utf-8") as f:
             return {**DEFAULTS, **json.load(f)}
-    except:
+    except FileNotFoundError:
+        return dict(DEFAULTS)
+    except Exception:
+        log.exception("配置读取失败，回退默认配置")
+        try:
+            if os.path.exists(CFG_PATH):
+                os.replace(CFG_PATH, CFG_PATH + ".corrupt")  # 保留损坏文件便于排查
+        except Exception:
+            log.exception("损坏配置备份失败")
         return dict(DEFAULTS)
 
 def save_cfg(cfg):
     try:
-        with open(CFG_PATH, "w", encoding="utf-8") as f:
+        tmp = CFG_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False)
-    except:
-        pass
+        os.replace(tmp, CFG_PATH)  # 原子替换，避免写到一半损坏
+    except Exception:
+        log.exception("配置保存失败")
 
 from PySide6.QtWidgets import QApplication, QLabel, QMenu, QWidget
 from PySide6.QtCore import Qt, QTimer, QSize, QSharedMemory
@@ -212,7 +242,7 @@ class Pet(QWidget):
             try:
                 old.stop()
             except Exception:
-                pass
+                log.debug("停止旧movie异常", exc_info=True)
         d = self._gif_dir()
         self.movies = {}
         self.movie_sizes = {}
@@ -311,8 +341,8 @@ class Pet(QWidget):
         if self.current_movie:
             try:
                 self.current_movie.stop()
-            except:
-                pass
+            except Exception:
+                log.debug("停止当前movie异常", exc_info=True)
         # 先按新表情尺寸定好容器并居中，再挂帧播放，避免首帧沿用旧尺寸造成“变大一帧”
         sz = self.movie_sizes.get(face_key, QSize(60, 60))
         self.label.setFixedSize(sz)
@@ -540,7 +570,7 @@ class Pet(QWidget):
                     pa._timer.stop()
                     pa.close()
                 except Exception:
-                    pass
+                    log.debug("清理粒子异常", exc_info=True)
             self.particles.clear()
         finally:
             if self.manager:
@@ -595,8 +625,8 @@ class PetManager:
             self.poll_timer = QTimer()
             self.poll_timer.timeout.connect(self._poll_cmds)
             self.poll_timer.start(100)
-        except Exception as e:
-            print("tray:", e)
+        except Exception:
+            log.exception("托盘初始化失败")
 
     def _poll_cmds(self):
         try:
@@ -609,8 +639,11 @@ class PetManager:
                     if len(self.pets) < 5:
                         self.spawn()
                 else:
-                    for p in self.pets:
-                        p.act(cmd)
+                    for p in list(self.pets):
+                        try:
+                            p.act(cmd)
+                        except Exception:
+                            log.exception("托盘命令处理失败: %s", cmd)
         except queue.Empty:
             pass
 

@@ -20,6 +20,7 @@
 !/test_logic.py
 !/test_click_switch.py
 !/test_lifecycle.py
+!/test_config.py
 !/visual_test.py
 !/test_exe_pkg.py
 !/capture_pet.py
