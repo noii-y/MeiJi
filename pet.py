@@ -411,6 +411,7 @@ class Pet(QWidget):
         self.last_auto_time = time.time()
         g = self._screen.availableGeometry()
         self.walk_target = (float(g.right() + 1 + W), self.py)
+        self._update_tick_rate()
 
     def come_back(self):
         self._away_mode = False
@@ -424,6 +425,7 @@ class Pet(QWidget):
         self.face("idle")
         tx = float(random.randint(g.left() + 100, g.left() + g.width() // 2))
         self.walk_target = (tx, self.py)
+        self._update_tick_rate()
 
     def start_walk(self, token=None):
         if not self._alive:
@@ -440,6 +442,7 @@ class Pet(QWidget):
         tx = max(g.left()+40, min(g.right()+1-W-40, cx + random.randint(-80, 80)))
         ty = max(g.top()+80, min(g.bottom()+1-W-80, cy + random.randint(-50, 50)))
         self.walk_target = (float(tx), float(ty))
+        self._update_tick_rate()
 
     def mousePressEvent(self, e):
         if e.button() == Qt.LeftButton:
@@ -544,6 +547,14 @@ class Pet(QWidget):
                     self.py < g.top() or self.py > g.bottom()+1-W):
                 self.px, self.py = self.clamp_to_screen(self.px, self.py)
                 self.move(int(self.px), int(self.py))
+        self._update_tick_rate()
+
+    def _update_tick_rate(self):
+        """GIF 由 QMovie 自行播放，不依赖本定时器；仅走路需要平滑高频，发呆时降到低频省 CPU。"""
+        fast = bool(self.walk_target and self.state == "walk")
+        desired = 30 if fast else 250
+        if self.timer.interval() != desired:
+            self.timer.setInterval(desired)
 
     def do_auto_step(self):
         self.last_auto_time = time.time()

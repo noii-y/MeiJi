@@ -22,6 +22,7 @@
 !/test_lifecycle.py
 !/test_config.py
 !/test_multimonitor.py
+!/test_tick.py
 !/visual_test.py
 !/test_exe_pkg.py
 !/capture_pet.py
