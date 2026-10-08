@@ -91,6 +91,20 @@ for _ in range(200):
 check("自动轮换出现>=8种表情", len(seen)>=8, f"{len(seen)}种: {sorted(seen)[:10]}")
 check("走开事件可触发(200次内)", away_count>=1, f"{away_count}次")
 
+# 6b. 活跃度方向：越高越频繁（间隔越短）
+iv10, iv50, iv100 = P.auto_interval(10), P.auto_interval(50), P.auto_interval(100)
+check("活跃度越高间隔越短", iv10>iv50>iv100, f"{iv10:.0f}>{iv50:.0f}>{iv100:.0f}")
+check("活跃度间隔锚点", iv50==600 and iv100==300, f"50->{iv50:.0f} 100->{iv100:.0f}")
+
+# 6c. “换表情后小走动”token：调度后若已点击/换状态，则放弃走动
+saved = (p.auto_state, p.state)
+_tok = saved[0]
+p.auto_state, p.state = "happy", "happy"
+p.start_walk(_tok)
+check("走动token过期不启动walk", p.state!="walk", p.state)
+p.auto_state, p.state = saved
+p.walk_target = None
+
 # 7. 饥饿表情
 p.fullness = 10; p.mood = 90
 hungry_faces = set()

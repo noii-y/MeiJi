@@ -91,6 +91,12 @@ STATE_FACE = {
 W = 200
 AUTO_INTERVAL = 600
 
+def auto_interval(activity):
+    """活跃度越高，自动轮换间隔越短（秒）。安静(10)=840s … 超活跃(100)=300s。"""
+    act = max(0, min(100, activity))
+    factor = max(0.5, 1.5 - act / 100.0)
+    return AUTO_INTERVAL * factor
+
 AUTO_POOL = [
     ("idle", 10), ("bliss", 4), ("lieflat", 4), ("relax", 3), ("joy", 3),
     ("happy", 3), ("smug", 2), ("think", 2), ("phone", 2),
@@ -171,6 +177,7 @@ class Pet(QWidget):
         self.state = "idle"
         self.state_end = 0
         self.auto_state = "idle"
+        self._alive = True
         self.last_auto_time = time.time()
         self.face("idle")
 
@@ -369,7 +376,12 @@ class Pet(QWidget):
         tx = float(random.randint(100, self.screen_w // 2))
         self.walk_target = (tx, self.py)
 
-    def start_walk(self):
+    def start_walk(self, token=None):
+        if not self._alive:
+            return
+        # 由“换表情后小走动”调度时，若这期间用户已点击或状态已变，则放弃，避免覆盖
+        if token is not None and (self.auto_state != token or self.state != self.auto_state):
+            return
         self.state = "walk"
         self.state_end = time.time() * 1000 + 4000
         self.face("idle")
@@ -452,7 +464,7 @@ class Pet(QWidget):
 
         if not self._drag_pos and not self._away_mode:
             elapsed = t - self.last_auto_time
-            interval = AUTO_INTERVAL * (1.0 + self.cfg.get("activity", 15)/200.0)
+            interval = auto_interval(self.cfg.get("activity", 15))
             if elapsed >= interval:
                 self.do_auto_step()
 
@@ -503,7 +515,8 @@ class Pet(QWidget):
                 self.auto_state = c
                 self.face(c)
                 self.state = c
-                QTimer.singleShot(random.randint(800, 2000), self.start_walk)
+                QTimer.singleShot(random.randint(800, 2000),
+                                  lambda c=c: self._alive and self.start_walk(c))
                 return
         self.auto_state = c
         self.face(c)
