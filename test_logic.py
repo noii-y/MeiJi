@@ -34,25 +34,25 @@ def _restore_cfg():
     elif os.path.exists(P.CFG_PATH):
         os.remove(P.CFG_PATH)
 
-# 1. 初始40个movie
-check("初始加载40个movie", len(p.movies)==40, str(len(p.movies)))
+# 1. 初始41个movie
+check("初始加载41个movie", len(p.movies)==41, str(len(p.movies)))
 
-# 2. 四个尺寸切换不崩、movie数=40、尺寸正确
+# 2. 四个尺寸切换不崩、movie数=41、尺寸正确
 for sz,exp in [(50,52),(60,60),(100,100),(150,150)]:
     p.set_size(sz)
     app.processEvents()
     idle_w = p.movie_sizes["idle"].width()
-    check(f"切尺寸{sz}: movie=40且idle宽<=目标", len(p.movies)==40 and idle_w<=sz+2,
+    check(f"切尺寸{sz}: movie=41且idle宽<=目标", len(p.movies)==41 and idle_w<=sz+2,
           f"movies={len(p.movies)} idle_w={idle_w}")
 
-# 3. face切换所有40表情不崩
+# 3. face切换所有41表情不崩
 ok_all = True
 for k in list(P.FACES.keys()):
     try:
         p.face(k); app.processEvents()
     except Exception as e:
         ok_all = False; print("  err", k, e)
-check("40表情逐个切换不崩", ok_all)
+check("41表情逐个切换不崩", ok_all)
 
 # 4. 单击延迟 + 双击取消
 p.set_size(60)

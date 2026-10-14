@@ -31,7 +31,7 @@ def spy_auto(self):
 P.Pet.do_auto_step = spy_auto
 
 # 1. 点击池
-check("点击池=39(40-away)", len(P.CLICK_POOL)==39, str(len(P.CLICK_POOL)))
+check("点击池=40(41-away)", len(P.CLICK_POOL)==40, str(len(P.CLICK_POOL)))
 check("away 不在点击池", "away" not in P.CLICK_POOL)
 check("点击池每个键都能映射到自身movie",
       all(P.STATE_FACE.get(k)==k and k in p.movies for k in P.CLICK_POOL))

@@ -5,9 +5,9 @@ from PIL import Image
 
 os.chdir(r"C:\Users\28030\Doubao\chats\2026-09-19\new-chat\meji-pet")
 
-# 从 pet.py 提取 FACES 键名（硬编码40个）
+# 从 pet.py 提取 FACES 键名（41个：40个录屏表情 + 合成眨眼 blink）
 FACES_KEYS = [
-    "idle","happy","hug","money","sleep","eat","excited","smug","kiss",
+    "idle","blink","happy","hug","money","sleep","eat","excited","smug","kiss",
     "laugh","phone","wave","hug2","joy","drunk","cry","bliss","wronged",
     "pout","think","shy","gift","flower","drink","rain","present","relax",
     "fume","furious","lieflat","stomp","cheer","cool","surprised","sushi",
@@ -22,17 +22,17 @@ def check(name, ok, detail=""):
     results.append((name, ok, detail))
     print(f"[{'PASS' if ok else 'FAIL'}] {name}  {detail}")
 
-# 1. 原始 assets 目录40个GIF
+# 1. 原始 assets 目录41个GIF（40录屏母版 + 合成眨眼）
 src_files = sorted(glob.glob("assets/*_t.gif"))
 src_files = [f for f in src_files if os.path.isfile(f)]
-check("原始素材数量=40", len(src_files)==40, f"实际{len(src_files)}")
+check("原始素材数量=41", len(src_files)==41, f"实际{len(src_files)}")
 
 # 2. 每个尺寸目录
 for sz in SIZES:
     d = f"assets/{sz}"
     check(f"目录存在 {d}", os.path.isdir(d))
     files = sorted(glob.glob(f"{d}/*_t.gif"))
-    check(f"{sz}px GIF数量=40", len(files)==40, f"实际{len(files)}")
+    check(f"{sz}px GIF数量=41", len(files)==41, f"实际{len(files)}")
 
 # 3. 逐文件检查：可打开、有透明、多帧、尺寸<=目标、非全透明
 for sz in SIZES:
@@ -71,11 +71,14 @@ for sz in SIZES:
     check(f"{sz}px 尺寸达标(普通<={target},away<=min(200,{target*1.4}),全部<=200)", not bad_size, str(bad_size[:5]))
     check(f"{sz}px 非全透明", not bad_empty, str(bad_empty[:5]))
 
-# 4. 帧数统计（抽查idle）
+# 4. 帧数统计（抽查idle 与合成眨眼 blink）
 for sz in ["50","150"]:
     im = Image.open(f"assets/{sz}/meji_idle_t.gif")
     check(f"{sz}px idle帧数={getattr(im,'n_frames',1)}", getattr(im,'n_frames',1)>1,
           f"{im.size}")
+    bm = Image.open(f"assets/{sz}/meji_blink_t.gif")
+    check(f"{sz}px blink帧数={getattr(bm,'n_frames',1)}(>=40)",
+          getattr(bm,'n_frames',1)>=40, f"{bm.size}")
 
 # 5. 配置读写与损坏回退
 sys.path.insert(0, r"C:\ps6"); sys.path.insert(0, r"C:\plibs")

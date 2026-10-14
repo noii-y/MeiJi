@@ -59,6 +59,7 @@ from PySide6.QtGui import QAction, QMovie
 
 FACES = {
     "idle":     "meji_idle_t.gif",
+    "blink":    "meji_blink_t.gif",  # 合成：idle微动+约5.4秒一次眨眼（休息态）
     "happy":    "meji_happy_t.gif",
     "hug":      "meji_hug_t.gif",
     "money":    "meji_money_t.gif",
@@ -101,7 +102,7 @@ FACES = {
 }
 
 STATE_FACE = {
-    "idle": "idle", "walk": "idle", "drag": "fume",
+    "idle": "idle", "walk": "idle", "drag": "fume", "blink": "blink",
     "happy": "happy", "excited": "excited", "laugh": "laugh",
     "cheer": "cheer", "flower": "flower", "joy": "joy",
     "smug": "smug", "cool": "cool", "shy": "shy",
@@ -128,7 +129,7 @@ def auto_interval(activity):
     return AUTO_INTERVAL * factor
 
 AUTO_POOL = [
-    ("idle", 10), ("bliss", 4), ("lieflat", 4), ("relax", 3), ("joy", 3),
+    ("blink", 10), ("bliss", 4), ("lieflat", 4), ("relax", 3), ("joy", 3),
     ("happy", 3), ("smug", 2), ("think", 2), ("phone", 2),
     ("laugh", 2), ("flower", 2), ("cool", 2),
     ("excited", 1), ("cheer", 1), ("shy", 1), ("sleep", 2),
@@ -205,12 +206,12 @@ class Pet(QWidget):
         self.py = float(random.randint(g.top() + 120, g.bottom() + 1 - W - 40))
         self.move(int(self.px), int(self.py))
 
-        self.state = "idle"
+        self.state = "blink"
         self.state_end = 0
-        self.auto_state = "idle"
+        self.auto_state = "blink"
         self._alive = True
         self.last_auto_time = time.time()
-        self.face("idle")
+        self.face("blink")
 
         self.fullness = 80.0
         self.mood = 80.0
